@@ -103,6 +103,7 @@ library
                       , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-ledger-alonzo
                       , cardano-ledger-byron
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
@@ -138,6 +139,7 @@ library
                       , safe-exceptions
                       , scientific
                       , shelley-spec-ledger
+                      , small-steps
                       , stm
                       , text
                       , time
