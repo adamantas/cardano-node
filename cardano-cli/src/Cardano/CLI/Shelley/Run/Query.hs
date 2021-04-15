@@ -269,8 +269,9 @@ runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolid = do
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryLedgerState
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe (writePoolParams poolid) result
+  _result <- executeQuery era cModeParams localNodeConnInfo qInMode
+  panic "TODO"
+  --TODO: obtainLedgerEraClassConstraints sbe (writePoolParams poolid) result
 
 
 -- | Obtain stake snapshot information for a pool, plus information about the total active stake.
@@ -293,8 +294,9 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolid = do
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryLedgerState
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe (writeStakeSnapshot poolid) result
+  _result <- executeQuery era cModeParams localNodeConnInfo qInMode
+  panic "TODO"
+  --TODO: obtainLedgerEraClassConstraints sbe (writeStakeSnapshot poolid) result
 
 
 runQueryLedgerState
@@ -323,7 +325,7 @@ runQueryLedgerState (AnyConsensusModeParams cModeParams)
                   qInMode
       panic "TODO"
       --obtainLedgerEraClassConstraints sbe (writeLedgerState mOutFile) result
-    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 
 runQueryProtocolState
@@ -576,7 +578,7 @@ printUtxo
 printUtxo shelleyBasedEra' txInOutTuple =
   case shelleyBasedEra' of
     ShelleyBasedEraShelley ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+      let (TxIn (TxId txhash) (TxIx index),  _) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)
@@ -585,7 +587,7 @@ printUtxo shelleyBasedEra' txInOutTuple =
              ]
 
     ShelleyBasedEraAllegra ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)
@@ -593,15 +595,15 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , "        " <> printableValue value
              ]
     ShelleyBasedEraMary ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)
              , textShowN 6 index
              , "        " <> printableValue value
              ]
-    ShelleyBasedEraAlonzo ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+    ShelleyBasedEraAlonzo -> --TODO: Pretty print datahash if present
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _mDataHash) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)
