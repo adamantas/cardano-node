@@ -723,7 +723,7 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState'
+    pQueryLedgerState = QueryDebugLedgerState'
                           <$> pConsensusModeParams
                           <*> pNetworkId
                           <*> pMaybeOutputFile

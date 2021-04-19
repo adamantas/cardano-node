@@ -297,7 +297,7 @@ data QueryCmd =
   | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
   | QueryUTxO' AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
-  | QueryLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   deriving Show
 
@@ -309,7 +309,7 @@ renderQueryCmd cmd =
     QueryStakeDistribution' {} -> "query stake-distribution"
     QueryStakeAddressInfo {} -> "query stake-address-info"
     QueryUTxO' {} -> "query utxo"
-    QueryLedgerState' {} -> "query ledger-state"
+    QueryDebugLedgerState' {} -> "query ledger-state"
     QueryProtocolState' {} -> "query protocol-state"
 
 data GovernanceCmd

@@ -98,7 +98,7 @@ runQueryCmd cmd =
       runQueryStakeDistribution consensusModeParams network mOutFile
     QueryStakeAddressInfo consensusModeParams addr network mOutFile ->
       runQueryStakeAddressInfo consensusModeParams addr network mOutFile
-    QueryLedgerState' consensusModeParams network mOutFile ->
+    QueryDebugLedgerState' consensusModeParams network mOutFile ->
       runQueryLedgerState consensusModeParams network mOutFile
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
@@ -253,7 +253,7 @@ runQueryLedgerState (AnyConsensusModeParams cModeParams)
     Just eInMode -> do
       let qInMode = QueryInEra eInMode
                       . QueryInShelleyBasedEra sbe
-                      $ QueryLedgerState
+                      $ QueryDebugLedgerState
       result <- executeQuery
                   era
                   cModeParams
@@ -362,12 +362,12 @@ writeStakeAddressInfo mOutFile delegsAndRewards =
 
 writeLedgerState :: forall era ledgerera.
                     ShelleyLedgerEra era ~ ledgerera
-                 => ToJSON (LedgerState era)
-                 => FromCBOR (LedgerState era)
+                 => ToJSON (DebugLedgerState era)
+                 => FromCBOR (DebugLedgerState era)
                  => Maybe OutputFile
-                 -> SerialisedLedgerState era
+                 -> SerialisedDebugLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
-writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
+writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
   case mOutFile of
     Nothing -> case decodeLedgerState qState of
                  Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
@@ -377,9 +377,9 @@ writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
         $ LBS.writeFile fpath $ unSerialised serLedgerState
  where
    decodeLedgerState
-     :: SerialisedLedgerState era
-     -> Either LBS.ByteString (LedgerState era)
-   decodeLedgerState (SerialisedLedgerState (Serialised ls)) =
+     :: SerialisedDebugLedgerState era
+     -> Either LBS.ByteString (DebugLedgerState era)
+   decodeLedgerState (SerialisedDebugLedgerState (Serialised ls)) =
      first (const ls) (decodeFull ls)
 
 
@@ -627,8 +627,8 @@ obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> ((Ledger.ShelleyBased ledgerera
-      , ToJSON (LedgerState era)
-      , FromCBOR (LedgerState era)
+      , ToJSON (DebugLedgerState era)
+      , FromCBOR (DebugLedgerState era)
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
