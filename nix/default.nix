@@ -1,6 +1,7 @@
 { system ? builtins.currentSystem
 , crossSystem ? null
 , config ? {}
+, customConfig ? import ./custom-config.nix
 , sourcesOverride ? {}
 , gitrev ? null
 }:
@@ -25,7 +26,7 @@ let
     # our own overlays:
     ++ [
       (pkgs: _: with pkgs; {
-        inherit gitrev;
+        inherit gitrev customConfig;
 
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
         commonLib = lib // pkgs.iohkNix // pkgs.iohkNix.cardanoLib

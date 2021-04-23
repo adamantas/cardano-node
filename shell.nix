@@ -5,9 +5,9 @@
 , sourcesOverride ? {}
 , withHoogle ? true
 , clusterProfile ? "default-mary"
-, customConfig ? { profileName = clusterProfile; }
+, customConfig ? import ./custom-config.nix // { profileName = clusterProfile; }
 , pkgs ? import ./nix {
-    inherit config sourcesOverride;
+    inherit config sourcesOverride customConfig;
   }
 }:
 with pkgs;
@@ -19,6 +19,15 @@ let
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
   clusterCabal = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = true; });
   clusterNix   = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = false; });
+  nixWapped = writeShellScriptBin "nix" ''
+    # Temporary override `supported-systems.nix` original content to be able to use `nix flake show|check` on dev machines (workaround for https://github.com/NixOS/nix/issues/4265)'
+    echo '[ "${system}" ]' > ./supported-systems.nix
+    function atexit() {
+        git restore --staged --worktree ./supported-systems.nix
+    }
+    trap atexit EXIT
+    ${nixFlakes}/bin/nix "$@"
+  '';
   shell = cardanoNodeProject.shellFor {
     name = "cabal-dev-shell";
 
@@ -46,8 +55,8 @@ let
       cardano-ping
       ghcid
       weeder
-      nixFlakes
       niv
+      nixWapped
       pkgconfig
       profiteur
       profiterole
@@ -97,6 +106,7 @@ let
     name = "devops-shell";
     buildInputs = [
       niv
+      nixWapped
       cardano-cli
       bech32
       cardano-node

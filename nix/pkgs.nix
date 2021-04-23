@@ -73,6 +73,8 @@ final: prev: with final;
                      (lib.traceValSeqN 2 cfg);
   cardanolib-py = callPackage ./cardanolib-py {};
 
+  scripts = import ./scripts.nix { inherit pkgs config customConfig; };
+
   clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
 
 }

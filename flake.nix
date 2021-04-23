@@ -18,40 +18,55 @@
         crypto
         cardano-lib
         (final: prev: {
+          customConfig = import ./custom-config.nix;
           gitrev = self.rev or "dirty";
           commonLib = final.lib // final.cardano-lib;
         })
         (import ./nix/pkgs.nix)
       ];
-    in utils.lib.eachSystem (import ./supported-systems.nix) (system:
+      inherit (utils.lib) eachSystem mkApp flattenTree;
+
+    in eachSystem (import ./supported-systems.nix) (system:
       let
         pkgs = import nixpkgs { inherit system overlays config; };
-        inherit (pkgs.lib) systems mapAttrs' nameValuePair recursiveUpdate;
+
+        inherit (pkgs.lib) systems mapAttrs mapAttrs' nameValuePair
+          recursiveUpdate mapAttrsRecursiveCond isDerivation concatStringsSep;
+
         windowsPkgs = import nixpkgs { inherit system overlays config;
           crossSystem = systems.examples.mingwW64;
         };
         flake = pkgs.cardanoNodeProject.flake {};
+        devShell = import ./shell.nix { inherit pkgs; };
         windowsFlake = windowsPkgs.cardanoNodeProject.flake {};
         prefixNamesWith = p: mapAttrs' (n: v: nameValuePair "${p}${n}" v);
       in recursiveUpdate flake {
 
-        packages = prefixNamesWith "windows:" windowsFlake.packages;
+        packages = (prefixNamesWith "windows:" windowsFlake.packages)
+          // { inherit (devShell) devops; };
         checks = prefixNamesWith "windows:" windowsFlake.checks;
 
         # Built by `nix build .`
         defaultPackage = flake.packages."cardano-node:exe:cardano-node";
 
-        # This is used by `nix develop .` to open a devShell
-        devShell = import ./shell.nix { inherit pkgs; };
+        # Run by `nix run .`
+        defaultApp = flake.apps."cardano-node:exe:cardano-node";
 
-        apps.repl = utils.lib.mkApp {
-          drv = pkgs.writeShellScriptBin "repl" ''
-            confnix=$(mktemp)
-            echo "builtins.getFlake (toString $(git rev-parse --show-toplevel))" >$confnix
-            trap "rm $confnix" EXIT
-            nix repl $confnix
+        # This is used by `nix develop .` to open a devShell
+        inherit devShell;
+
+        apps = {
+          repl = mkApp {
+            drv = pkgs.writeShellScriptBin "repl" ''
+              confnix=$(mktemp)
+              echo "builtins.getFlake (toString $(git rev-parse --show-toplevel))" >$confnix
+              trap "rm $confnix" EXIT
+              nix repl $confnix
           '';
-        };
+          };
+        }
+          #// (mapAttrs (_: drv: mkApp {inherit drv;}) (flattenTree pkgs.scripts))
+          ;
       }
     );
 }
