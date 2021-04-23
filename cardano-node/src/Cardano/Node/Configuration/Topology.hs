@@ -160,9 +160,9 @@ data NetworkTopology = RealNodeTopology !LocalRootPeersGroups ![PublicRootPeers]
 
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o ->
-                RealNodeTopology <$> o .: "LocalProducers"
-                                 <*> o .: "PublicProducers"
-                                 <*> (o .:? "useLedgerAfterSlot" .!= (UseLedger DontUseLedger))
+                RealNodeTopology <$> (o .:? "LocalProducers"     .!= LocalRootPeersGroups [])
+                                 <*> (o .:? "PublicProducers"    .!= [])
+                                 <*> (o .:? "useLedgerAfterSlot" .!= UseLedger DontUseLedger)
 
 instance ToJSON NetworkTopology where
   toJSON top =
