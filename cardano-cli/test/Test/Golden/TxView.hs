@@ -6,6 +6,7 @@ import           Cardano.Prelude
 
 import           Hedgehog (Group (..), Property, checkSequential)
 import           Hedgehog.Extras.Test.Base (moduleWorkspace, propertyOnce)
+import           System.FilePath ((</>))
 
 import           Test.OptParse (execCardanoCLI, noteTempFile)
 import           Test.Utilities (diffVsGoldenFile)
@@ -49,7 +50,12 @@ golden_view_byron =
     diffVsGoldenFile result "test/data/golden/byron/transaction-view.out"
 
 golden_view_shelley :: Property
-golden_view_shelley =
+golden_view_shelley = let
+  certs = "test/data/golden/shelley/certificates"
+  dereg   = certs </> "stake_address_deregistration_certificate"
+  deleg   = certs </> "genesis_key_delegation_certificate"
+  poolreg = certs </> "stake_pool_registration_certificate"
+  in
   propertyOnce $
   moduleWorkspace "tmp" $ \tempDir -> do
     transactionBodyFile <- noteTempFile tempDir "transaction-body-file"
@@ -59,6 +65,9 @@ golden_view_shelley =
       execCardanoCLI
         [ "transaction", "build-raw"
         , "--shelley-era"
+        , "--certificate-file", dereg
+        , "--certificate-file", deleg
+        , "--certificate-file", poolreg
         , "--tx-in"
         ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891\
             \#29"

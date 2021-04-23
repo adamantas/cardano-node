@@ -27,11 +27,12 @@ import           Cardano.Api as Api (AddressInEra (..),
                    ValidityUpperBoundSupportedInEra (ValidityUpperBoundInShelleyEra), ViewTx,
                    auxScriptsSupportedInEra, certificatesSupportedInEra, displayError,
                    getTransactionBodyContent, multiAssetSupportedInEra, serialiseAddress,
-                   serialiseAddressForTxOut, txMetadataSupportedInEra, updateProposalSupportedInEra,
-                   validityLowerBoundSupportedInEra, validityUpperBoundSupportedInEra,
-                   withdrawalsSupportedInEra)
+                   serialiseAddressForTxOut, serialiseToRawBytesHexText, txMetadataSupportedInEra,
+                   updateProposalSupportedInEra, validityLowerBoundSupportedInEra,
+                   validityUpperBoundSupportedInEra, withdrawalsSupportedInEra)
 import           Cardano.Api.Byron (Lovelace (..))
-import           Cardano.Api.Shelley (Address (ShelleyAddress), StakeAddress (..))
+import           Cardano.Api.Shelley (Address (ShelleyAddress), Certificate (..), StakeAddress (..),
+                   StakePoolParameters (..))
 import qualified Shelley.Spec.Ledger.API as Shelley
 
 import           Cardano.CLI.Helpers (textShow)
@@ -127,14 +128,16 @@ friendlyWithdrawals :: TxWithdrawals ViewTx era -> Value
 friendlyWithdrawals TxWithdrawalsNone = Null
 friendlyWithdrawals (TxWithdrawals _ withdrawals) =
   array
-    [ object
-        [ "address"     .= serialiseAddress addr
-        , "network"     .= net
-        , "credential"  .= cred
-        , "amount"      .= friendlyLovelace amount
-        ]
-    | (addr@(StakeAddress net cred), amount, _) <- withdrawals
+    [ object $
+        "address"     .= serialiseAddress addr   :
+        "amount"      .= friendlyLovelace amount :
+        friendlyStakeAddress addr
+    | (addr, amount, _) <- withdrawals
     ]
+
+friendlyStakeAddress :: StakeAddress -> [(Text, Value)]
+friendlyStakeAddress (StakeAddress net cred) =
+  ["network" .= net, "credential" .= cred]
 
 friendlyTxOut :: TxOut era -> Value
 friendlyTxOut (TxOut addr amount) =
@@ -169,7 +172,75 @@ friendlyUpdateProposal = \case
 friendlyCertificates :: TxCertificates ViewTx era -> Value
 friendlyCertificates = \case
   TxCertificatesNone    -> Null
-  TxCertificates _ cs _ -> toJSON $ map textShow cs
+  TxCertificates _ cs _ -> array $ map friendlyCertificate cs
+
+friendlyCertificate :: Certificate -> Value
+friendlyCertificate =
+  object .
+  \case
+    -- Stake address certificates
+    StakeAddressRegistrationCertificate credential ->
+      [ "Type"       .= String "stake address registraction"
+      , "credential" .= credential
+      ]
+    StakeAddressDeregistrationCertificate credential ->
+      [ "Type"       .= String "stake address deregistraction"
+      , "credential" .= credential
+      ]
+    StakeAddressDelegationCertificate credential poolId ->
+      [ "Type"       .= String "stake address delegation"
+      , "credential" .= credential
+      , "pool"       .= poolId
+      ]
+
+    -- Stake pool certificates
+    StakePoolRegistrationCertificate parameters ->
+      "Type" .= String "stake pool registration" :
+      friendlyStakePoolParameters parameters
+    -- StakePoolRetirementCertificate   PoolId EpochNo
+
+    -- Special certificates
+    GenesisKeyDelegationCertificate genesisKeyHash delegateKeyHash vrfKeyHash ->
+      [ "Type"              .= String "genesis key delegation"
+      , "genesis key hash"  .= serialiseToRawBytesHexText genesisKeyHash
+      , "delegate key hash" .= serialiseToRawBytesHexText delegateKeyHash
+      , "VRF key hash"      .= serialiseToRawBytesHexText vrfKeyHash
+      ]
+    -- MIRCertificate MIRPot MIRTarget
+
+friendlyStakePoolParameters :: StakePoolParameters -> [(Text, Value)]
+friendlyStakePoolParameters
+  StakePoolParameters
+    { stakePoolId
+    , stakePoolVRF
+    , stakePoolCost
+    , stakePoolMargin
+    , stakePoolRewardAccount
+    , stakePoolPledge
+    , stakePoolOwners
+    , stakePoolRelays
+    , stakePoolMetadata
+    } =
+  [ "pool"            .= stakePoolId
+  , "VRF key hash"    .= serialiseToRawBytesHexText stakePoolVRF
+  , "cost"            .= friendlyLovelace stakePoolCost
+  , "margin"          .= friendlyRational stakePoolMargin
+  , "reward account"  .= object (friendlyStakeAddress stakePoolRewardAccount)
+  , "pledge"          .= friendlyLovelace stakePoolPledge
+  , "owners (stake key hashes)"
+                      .= map serialiseToRawBytesHexText stakePoolOwners
+  -- , "relays"
+  ]
+
+friendlyRational :: Rational -> Value
+friendlyRational r =
+  String $
+    case d of
+      1 -> textShow n
+      _ -> textShow n <> "/" <> textShow d
+  where
+    n = numerator r
+    d = denominator r
 
 friendlyFee :: TxFee era -> Value
 friendlyFee = \case
