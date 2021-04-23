@@ -42,6 +42,8 @@
         prefixNamesWith = p: mapAttrs' (n: v: nameValuePair "${p}${n}" v);
       in recursiveUpdate flake {
 
+        inherit pkgs;
+
         packages = (prefixNamesWith "windows:" windowsFlake.packages)
           // { inherit (devShell) devops; };
         checks = prefixNamesWith "windows:" windowsFlake.checks;
@@ -64,9 +66,10 @@
               nix repl $confnix
           '';
           };
-        }
-          #// (mapAttrs (_: drv: mkApp {inherit drv;}) (flattenTree pkgs.scripts))
-          ;
+        } // (mapAttrs
+          # nix run .#<env>/node
+          (_: drv: (mkApp {inherit drv; exePath = "";}))
+          (flattenTree pkgs.scripts));
       }
     );
 }

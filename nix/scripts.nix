@@ -108,8 +108,7 @@ let
     mkdir -p "${config.stateDir}"
     ${nodeScript} $@
   '';
-  scripts = forEnvironments (environment:
-  {
+  scripts = forEnvironments (environment: recurseIntoAttrs {
     node = mkNodeScript environment;
   });
 in scripts
