@@ -36,6 +36,7 @@ import           System.Environment (lookupEnv)
 #ifdef UNIX
 import           System.Posix.Files
 import           System.Posix.Types (FileMode)
+import qualified System.Posix.Signals as Signals
 #else
 import           System.Win32.File
 #endif
@@ -230,6 +231,11 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   publicRootsVar <- newTVarIO publicRoots
   useLedgerVar <- newTVarIO (useLedgerAfterSlot nt)
 
+  _ <- Signals.installHandler
+        Signals.sigHUP
+        (updateDocs tracer localRootsVar publicRootsVar useLedgerVar)
+        Nothing
+
   let
       diffusionArguments :: DiffusionArguments IO
       diffusionArguments =
@@ -314,6 +320,24 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   traceNodeBasicInfo tr basicInfoItems =
     forM_ basicInfoItems $ \(LogObject nm mt content) ->
       traceNamedObject (appendName nm tr) (mt, content)
+
+  updateDocs :: Tracer IO Text
+             -> StrictTVar IO [(Int, Map RelayAddress PeerAdvertise)]
+             -> StrictTVar IO [RelayAddress]
+             -> StrictTVar IO UseLedgerAfter
+             -> Signals.Handler
+  updateDocs tracer localRootsVar publicRootsVar useLedgerVar =
+    Signals.Catch $ do
+      traceWith tracer (Text.pack "Performing local configuration update")
+      eitherTopology <- readTopologyFile nc
+      nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
+
+      let (localRoots, publicRoots) = producerAddresses nt
+
+      atomically $ do
+        writeTVar localRootsVar localRoots
+        writeTVar publicRootsVar publicRoots
+        writeTVar useLedgerVar (useLedgerAfterSlot nt)
 
 --------------------------------------------------------------------------------
 -- Helper functions
