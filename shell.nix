@@ -46,7 +46,7 @@ let
       cardano-ping
       ghcid
       weeder
-      nix
+      nixFlakes
       niv
       pkgconfig
       profiteur
@@ -73,7 +73,13 @@ let
       echo "Setting 'cabal.project' for local builds.."
       ./scripts/cabal-inside-nix-shell.sh
 
+      echo 'Temporary override `supported-systems.nix` original content to be able to use `nix flake show|check` on dev machines (workaround for https://github.com/NixOS/nix/issues/4265)'
+      echo '[ "${system}" ]' > ./supported-systems.nix
+
       function atexit() {
+          echo 'Reverting `supported-systems.nix` to the index version..'
+          git restore --staged --worktree ./supported-systems.nix
+
           echo "Reverting 'cabal.project' to the index version.."
           ./scripts/cabal-inside-nix-shell.sh --restore
       }

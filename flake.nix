@@ -23,7 +23,7 @@
         })
         (import ./nix/pkgs.nix)
       ];
-    in utils.lib.eachSystem [ "x86_64-linux" ] (system:
+    in utils.lib.eachSystem (import ./supported-systems.nix) (system:
       let
         pkgs = import nixpkgs { inherit system overlays config; };
         inherit (pkgs.lib) systems mapAttrs' nameValuePair recursiveUpdate;
